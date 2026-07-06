@@ -1,0 +1,118 @@
+services:
+  control-plane:
+    build:
+      context: ./control_plane
+      dockerfile: Dockerfile
+    container_name: control-plane
+    restart: unless-stopped
+    ports:
+      - "7000:7000"
+    environment:
+      CP_SCAN_TARGETS: "echo-agent:9001,calculator-agent:9002,reverse-text-agent:9003,translator-agent:9004,flaky-agent:9005"
+      CP_SCAN_INTERVAL_SECONDS: "20"
+      CP_HEALTH_CHECK_INTERVAL_SECONDS: "10"
+      CP_FAILURE_THRESHOLD: "3"
+      CP_MAX_RETRIES: "3"
+      CP_API_KEY: "${CP_API_KEY:-devkey-change-me}"
+      CP_REGISTRATION_TOKEN: "${CP_REGISTRATION_TOKEN:-devtoken-change-me}"
+      CP_JSON_LOGS: "true"
+      CP_LOG_LEVEL: "INFO"
+    networks:
+      - a2a-net
+    depends_on:
+      - echo-agent
+      - calculator-agent
+      - reverse-text-agent
+      - translator-agent
+      - flaky-agent
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: control-plane-ui
+    restart: unless-stopped
+    ports:
+      - "8501:8501"
+    environment:
+      CONTROL_PLANE_URL: "http://control-plane:7000"
+      CONTROL_PLANE_API_KEY: "${CP_API_KEY:-devkey-change-me}"
+    depends_on:
+      - control-plane
+    networks:
+      - a2a-net
+
+  echo-agent:
+    build:
+      context: ./agents
+      dockerfile: echo_agent/Dockerfile
+    container_name: echo-agent
+    environment:
+      AGENT_PORT: "9001"
+    ports:
+      - "9001:9001"
+    networks:
+      a2a-net:
+        aliases:
+          - agent-9001
+
+  calculator-agent:
+    build:
+      context: ./agents
+      dockerfile: calculator_agent/Dockerfile
+    container_name: calculator-agent
+    environment:
+      AGENT_PORT: "9002"
+    ports:
+      - "9002:9002"
+    networks:
+      a2a-net:
+        aliases:
+          - agent-9002
+
+  reverse-text-agent:
+    build:
+      context: ./agents
+      dockerfile: reverse_text_agent/Dockerfile
+    container_name: reverse-text-agent
+    environment:
+      AGENT_PORT: "9003"
+    ports:
+      - "9003:9003"
+    networks:
+      a2a-net:
+        aliases:
+          - agent-9003
+
+  translator-agent:
+    build:
+      context: ./agents
+      dockerfile: translator_agent/Dockerfile
+    container_name: translator-agent
+    environment:
+      AGENT_PORT: "9004"
+    ports:
+      - "9004:9004"
+    networks:
+      a2a-net:
+        aliases:
+          - agent-9004
+
+  flaky-agent:
+    build:
+      context: ./agents
+      dockerfile: flaky_agent/Dockerfile
+    container_name: flaky-agent
+    environment:
+      AGENT_PORT: "9005"
+      FAILURE_RATE: "0.5"
+    ports:
+      - "9005:9005"
+    networks:
+      a2a-net:
+        aliases:
+          - agent-9005
+
+networks:
+  a2a-net:
+    driver: bridge
